@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Murgi Tola</string>
+    <string name="hero_title">I LOVE MURGI TOLA ❤️</string>
+    <string name="hero_subtitle">REAL WORLD 3D VILLAGE EXPLORER</string>
+    <string name="btn_explore_village">EXPLORE MURGI TOLA</string>
+    <string name="btn_create_village">CREATE MY VILLAGE</string>
+    <string name="btn_scan_360">SCAN 360° LOCATION</string>
+    <string name="btn_saved_locations">MY SAVED LOCATIONS</string>
+    <string name="btn_graphics_settings">GRAPHICS SETTINGS</string>
+    <string name="btn_character_settings">CHARACTER SETTINGS</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="sign_out">Sign Out</string>
+</resources>

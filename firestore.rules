@@ -1,0 +1,174 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserSettings(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.characterPreset in ['EXPLORER', 'RANGER', 'FESTIVE', 'TACTICAL'] &&
+             (!('characterAccentHex' in data) || (data.characterAccentHex is string && data.characterAccentHex.size() <= 16)) &&
+             (!('walkSpeedMultiplier' in data) || (data.walkSpeedMultiplier is number && data.walkSpeedMultiplier >= 0.5 && data.walkSpeedMultiplier <= 2.5)) &&
+             (!('cameraSensitivity' in data) || (data.cameraSensitivity is number && data.cameraSensitivity >= 0.2 && data.cameraSensitivity <= 3.0)) &&
+             (!('invertCameraY' in data) || data.invertCameraY is bool) &&
+             data.graphicsQuality in ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] &&
+             (!('autoGraphics' in data) || data.autoGraphics is bool) &&
+             (!('lodEnabled' in data) || data.lodEnabled is bool) &&
+             (!('occlusionCulling' in data) || data.occlusionCulling is bool) &&
+             (!('dynamicResolution' in data) || data.dynamicResolution is bool) &&
+             (!('soundEnabled' in data) || data.soundEnabled is bool) &&
+             (!('weatherMode' in data) || data.weatherMode in ['SUNNY', 'GOLDEN_HOUR', 'NIGHT', 'MONSOON']) &&
+             (!('timeOfDay' in data) || (data.timeOfDay is number && data.timeOfDay >= 0.0 && data.timeOfDay <= 1.0)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidVillageProject(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 400)) &&
+             (!('lastLocationId' in data) || (data.lastLocationId is string && data.lastLocationId.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidVillageLocation(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.villageId is string && isValidId(data.villageId) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.category in ['HOUSE', 'ROAD', 'SHOP', 'FIELD', 'LANDMARK'] &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+             data.markedAsHouse is bool &&
+             data.favorite is bool &&
+             data.explored is bool &&
+             data.panoramaOnly is bool &&
+             data.posX is number && data.posX >= -2000.0 && data.posX <= 2000.0 &&
+             data.posZ is number && data.posZ >= -2000.0 && data.posZ <= 2000.0 &&
+             data.connectedIds is list && data.connectedIds.size() <= 20 &&
+             (data.connectedIds.size() == 0 || data.connectedIds[0] is string) &&
+             data.mediaType in ['PANORAMA_360', 'MULTI_PHOTO', 'PANORAMA_VIDEO', 'SAMPLE_360'] &&
+             (!('localImagePath' in data) || (data.localImagePath is string && data.localImagePath.size() <= 512)) &&
+             (!('aiSummary' in data) || (data.aiSummary is string && data.aiSummary.size() <= 1000)) &&
+             (!('aiBuildingsCount' in data) || (data.aiBuildingsCount is int && data.aiBuildingsCount >= 0 && data.aiBuildingsCount <= 50)) &&
+             (!('aiTreesCount' in data) || (data.aiTreesCount is int && data.aiTreesCount >= 0 && data.aiTreesCount <= 100)) &&
+             (!('aiPolesCount' in data) || (data.aiPolesCount is int && data.aiPolesCount >= 0 && data.aiPolesCount <= 50)) &&
+             (!('aiRoadSurface' in data) || (data.aiRoadSurface is string && data.aiRoadSurface.size() <= 100)) &&
+             (!('aiLighting' in data) || (data.aiLighting is string && data.aiLighting.size() <= 100)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'characterPreset', 'graphicsQuality', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'characterPreset', 'characterAccentHex',
+                         'walkSpeedMultiplier', 'cameraSensitivity', 'invertCameraY',
+                         'graphicsQuality', 'autoGraphics', 'lodEnabled', 'occlusionCulling',
+                         'dynamicResolution', 'soundEnabled', 'weatherMode', 'timeOfDay',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserSettings(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserSettings(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'characterPreset', 'characterAccentHex',
+                         'walkSpeedMultiplier', 'cameraSensitivity', 'invertCameraY',
+                         'graphicsQuality', 'autoGraphics', 'lodEnabled', 'occlusionCulling',
+                         'dynamicResolution', 'soundEnabled', 'weatherMode', 'timeOfDay',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /villages/{villageId} {
+        allow get: if isOwner(userId) && isValidId(villageId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(villageId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'description', 'lastLocationId', 'createdAt', 'updatedAt']) &&
+                         isValidVillageProject(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(villageId) &&
+                         isValidVillageProject(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'lastLocationId', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(villageId);
+      }
+
+      match /locations/{locationId} {
+        allow get: if isOwner(userId) && isValidId(locationId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(locationId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'villageId', 'name', 'category',
+                           'markedAsHouse', 'favorite', 'explored', 'panoramaOnly',
+                           'posX', 'posZ', 'connectedIds', 'mediaType',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'villageId', 'name', 'category', 'notes',
+                           'markedAsHouse', 'favorite', 'explored', 'panoramaOnly',
+                           'posX', 'posZ', 'connectedIds', 'mediaType', 'localImagePath',
+                           'aiSummary', 'aiBuildingsCount', 'aiTreesCount', 'aiPolesCount',
+                           'aiRoadSurface', 'aiLighting', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidVillageLocation(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(locationId) &&
+                         isValidVillageLocation(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().villageId == existing().villageId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'category', 'notes', 'markedAsHouse', 'favorite',
+                           'explored', 'panoramaOnly', 'posX', 'posZ', 'connectedIds',
+                           'mediaType', 'localImagePath', 'aiSummary', 'aiBuildingsCount',
+                           'aiTreesCount', 'aiPolesCount', 'aiRoadSurface', 'aiLighting',
+                           'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(locationId);
+      }
+    }
+  }
+}

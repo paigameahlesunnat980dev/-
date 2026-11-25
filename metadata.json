@@ -1,0 +1,6 @@
+{
+  "name": "Murgi Tola",
+  "description": "Cinematic 3D open-world village explorer and 360-degree scanner for Murgi Tola with third-person gameplay, interactive map, and AI-assisted scene reconstruction.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

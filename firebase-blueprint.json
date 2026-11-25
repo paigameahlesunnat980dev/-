@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User graphics, gameplay, weather, and character customization preferences for Murgi Tola.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user UID." },
+        "displayName": { "type": "string", "description": "Explorer display name." },
+        "characterPreset": {
+          "type": "string",
+          "enum": ["EXPLORER", "RANGER", "FESTIVE", "TACTICAL"]
+        },
+        "characterAccentHex": { "type": "string", "description": "Accent color hex for explorer outfit." },
+        "walkSpeedMultiplier": { "type": "number" },
+        "cameraSensitivity": { "type": "number" },
+        "invertCameraY": { "type": "boolean" },
+        "graphicsQuality": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "ULTRA"]
+        },
+        "autoGraphics": { "type": "boolean" },
+        "lodEnabled": { "type": "boolean" },
+        "occlusionCulling": { "type": "boolean" },
+        "dynamicResolution": { "type": "boolean" },
+        "soundEnabled": { "type": "boolean" },
+        "weatherMode": {
+          "type": "string",
+          "enum": ["SUNNY", "GOLDEN_HOUR", "NIGHT", "MONSOON"]
+        },
+        "timeOfDay": { "type": "number", "description": "Normalized 0.0 to 1.0 time of day." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "displayName", "graphicsQuality", "characterPreset", "createdAt", "updatedAt"]
+    },
+    "VillageProject": {
+      "title": "VillageProject",
+      "description": "A saved Murgi Tola village world project.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "lastLocationId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "createdAt", "updatedAt"]
+    },
+    "VillageLocation": {
+      "title": "VillageLocation",
+      "description": "A scanned 360-degree photo or multi-image 3D reconstructed village location in Murgi Tola.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "villageId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": ["HOUSE", "ROAD", "SHOP", "FIELD", "LANDMARK"]
+        },
+        "notes": { "type": "string" },
+        "markedAsHouse": { "type": "boolean" },
+        "favorite": { "type": "boolean" },
+        "explored": { "type": "boolean" },
+        "panoramaOnly": { "type": "boolean" },
+        "posX": { "type": "number" },
+        "posZ": { "type": "number" },
+        "connectedIds": { "type": "array" },
+        "mediaType": {
+          "type": "string",
+          "enum": ["PANORAMA_360", "MULTI_PHOTO", "PANORAMA_VIDEO", "SAMPLE_360"]
+        },
+        "localImagePath": { "type": "string" },
+        "aiSummary": { "type": "string" },
+        "aiBuildingsCount": { "type": "integer" },
+        "aiTreesCount": { "type": "integer" },
+        "aiPolesCount": { "type": "integer" },
+        "aiRoadSurface": { "type": "string" },
+        "aiLighting": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "villageId",
+        "name",
+        "category",
+        "markedAsHouse",
+        "favorite",
+        "explored",
+        "panoramaOnly",
+        "posX",
+        "posZ",
+        "connectedIds",
+        "mediaType",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "User profile, character, and graphics settings."
+    },
+    "/users/{userId}/villages/{villageId}": {
+      "schema": { "$ref": "#/entities/VillageProject" },
+      "description": "Saved Murgi Tola village projects owned by the user."
+    },
+    "/users/{userId}/locations/{locationId}": {
+      "schema": { "$ref": "#/entities/VillageLocation" },
+      "description": "Scanned 360-degree and reconstructed 3D locations inside user villages."
+    }
+  }
+}
